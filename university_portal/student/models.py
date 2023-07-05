@@ -112,6 +112,46 @@ class Student(models.Model):
     how_did_you_hear = models.CharField(max_length=100, choices=REFERRAL_CHOICES)
    
 
-class AcademicAchivment(models.Model):
-    what_is_your_highest_level_of_education=
-    county_where_study_completed=
+class AcademicAchievement(models.Model):
+    HIGHEST_EDUCATION_CHOICES = (
+        ('highschool', 'High School'),
+        ('language_pathway', 'Language Pathway'),
+        ('undergraduate-foundation', 'Undergraduate Foundation'),
+        ('undergraduate-certificate', 'Undergraduate Certificate'),
+        ('undergraduate-diploma', 'Undergraduate Diploma'),
+        ('undergraduate-associate_degree', 'Undergraduate Associate Degree'),
+        ('undergraduate-bachelor', 'Undergraduate Bachelor'),
+        ('postgraduate-certificate', 'Postgraduate Certificate'),
+        ('postgraduate-diploma', 'Postgraduate Diploma'),
+        ('masters', 'Master\'s Degree'),
+        ('doctrate_phd', 'Doctorate/PhD'),
+    )
+
+    what_is_your_highest_level_of_education = models.CharField(max_length=50, choices=HIGHEST_EDUCATION_CHOICES)
+    country_where_study_completed = models.CharField(max_length=100)
+
+
+class StudyPreference(models.Model):
+    # INTENDED_COURSE_LEVEL_CHOICES = (
+    #     ('undergraduate', 'Undergraduate'),
+    #     ('postgraduate', 'Postgraduate'),
+    #     ('diploma', 'Diploma'),
+    #     ('certificate', 'Certificate'),
+    #     ('language', 'Language Program'),
+    #     ('foundation', 'Foundation Program'),
+    # )
+
+    intended_area_of_study = models.CharField(max_length=100)
+    # intended_course_level = models.CharField(max_length=50, choices=INTENDED_COURSE_LEVEL_CHOICES)
+    intended_course_level = models.CharField(max_length=50)
+    courses_and_fields_comments = models.TextField()
+    career_paths = models.TextField()
+    intended_institutions = models.TextField()
+    intended_intake_quarter = models.CharField(max_length=50)
+    intended_intake_year = models.IntegerField()
+    intended_intake_comments = models.TextField()
+    funding_source = models.CharField(max_length=100)
+    intended_destination_1 = models.CharField(max_length=100)
+    intended_destination_2 = models.CharField(max_length=100)
+    intended_destination_3 = models.CharField(max_length=100)
+    intended_destination_comments = models.TextField()
