@@ -1,26 +1,43 @@
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,Group
 from django.db import models
+from datetime import date
 
-# Create your models here.
 
-class User(models.Model):
-    ADMIN = 'admin'
-    AGENT = 'agent'
-    STUDENT = 'student'
-    SUPERUSER = 'superuser'
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError('The Email field must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
 
-    ROLE_CHOICES = [
-        (ADMIN, 'Admin'),
-        (AGENT, 'Agent'),
-        (STUDENT, 'Student'),
-        (SUPERUSER, 'Superuser'),
-    ]
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('user_type', 'superadmin')
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        return self.create_user(email, password, **extra_fields)
 
-    name = models.CharField(max_length=100)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES)
+class CustomUser(AbstractBaseUser):
+    USER_TYPE_CHOICES = (
+        ('superadmin', 'Super Admin'),
+        ('staff', 'Staff'),
+        ('agent', 'Agent'),
+        ('student', 'Student'),
+    )
+
+    email = models.EmailField(unique=True)
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    USERNAME_FIELD = 'email'
+
+    objects = CustomUserManager()
 
     def __str__(self):
-        return self.name
-
+        return self.email
 
 # class University(models.Model):
     # UNIVERSITY_CHOICES = [
@@ -49,37 +66,37 @@ class User(models.Model):
     # university_choice = models.CharField(max_length=100, choices=UNIVERSITY_CHOICES)
 class University(models.Model):
     serial_no = models.IntegerField()
-    name = models.CharField(max_length=100)
-    concentration = models.CharField(max_length=100)
+    name = models.CharField(max_length=100,blank=True ,null=True)
+    concentration = models.CharField(max_length=100,blank=True ,null=True)
     website_url = models.URLField()
-    campus = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
-    study_level = models.CharField(max_length=100)
-    duration = models.CharField(max_length=100)
-    intakes = models.CharField(max_length=100)
-    entry_requirements = models.TextField()
+    campus = models.CharField(max_length=100,blank=True ,null=True)
+    country = models.CharField(max_length=100,blank=True ,null=True)
+    study_level = models.CharField(max_length=100,blank=True ,null=True)
+    duration = models.CharField(max_length=100,blank=True ,null=True)
+    intakes = models.CharField(max_length=100,blank=True ,null=True)
+    entry_requirements = models.TextField(blank=True ,null=True)
     ielts_score = models.DecimalField(max_digits=4, decimal_places=2)
     ielts_no_band_less_than = models.DecimalField(max_digits=4, decimal_places=2)
-    toefl_score = models.IntegerField()
-    toefl_no_band_less_than = models.IntegerField()
-    pte_score = models.IntegerField()
+    toefl_score = models.IntegerField(blank=True ,null=True)
+    toefl_no_band_less_than = models.IntegerField(blank=True ,null=True)
+    pte_score = models.IntegerField(blank=True ,null=True)
     pte_no_band_less_than = models.CharField(max_length=10)
     application_deadline = models.DateField(null=True)
     application_fee = models.DecimalField(max_digits=10, decimal_places=2 ,null=True)
-    yearly_tuition_fee = models.DecimalField(max_digits=10, decimal_places=2)
-    scholarship_available = models.BooleanField(default=False ,null=True)
+    yearly_tuition_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True ,null=True)
+    scholarship_available = models.BooleanField(default=False)
     scholarship_detail = models.TextField(blank=True ,null=True)
-    backlog_range = models.CharField(max_length=100, blank=True)
-    remarks = models.TextField(blank=True)
+    backlog_range = models.CharField(max_length=100, blank=True, null=True)
+    remarks = models.TextField(blank=True ,null=True)
     esl_elp_detail = models.TextField(blank=True ,null=True)
     application_mode = models.CharField(max_length=100 ,null=True)
     application = models.CharField(max_length=100,null=True)
-    det_score = models.IntegerField()
+    det_score = models.IntegerField(blank=True ,null=True)
     
     def __str__(self):
         return self.name
 
-
+   
 class Student(models.Model):
     REFERRAL_CHOICES = (
         ('social/facebook', 'Social Media (Facebook)'),
@@ -98,19 +115,94 @@ class Student(models.Model):
         ('school', 'School'),
         ('other', 'Other'),
     )
-    University= models.ManyToManyField("University")
-    name = models.CharField(max_length=100)
-    family_name = models.CharField(max_length=50)
-    email = models.EmailField(max_length=254)
-    nationality=models.CharField(max_length=100)
-    region = models.CharField(max_length=50)
+    University= models.ManyToManyField(University,related_name='students')
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='student_profile')
+    name = models.CharField(max_length=100,null= True,blank=True)
+    family_name = models.CharField(max_length=100,null= True,blank=True)
+    email = models.EmailField(max_length=254,null= True,blank=True)
+    nationality=models.CharField(max_length=100,null= True,blank=True)
+    region = models.CharField(max_length=50,null= True,blank=True)
     onshore = models.BooleanField()
-    preferred_language = models.CharField(max_length=50)
+    preferred_language = models.CharField(max_length=50,null= True,blank=True)
     contact_number = models.IntegerField()
-    country_of_residence=models.CharField(max_length=50)
-    highest_education=models.CharField(max_length=50)
+    country_of_residence=models.CharField(max_length=50,null= True,blank=True)
+    highest_education=models.CharField(max_length=50,null= True,blank=True)
+    created_at= models.DateField(auto_now=False, auto_now_add=False,null= True,blank=True)
     how_did_you_hear = models.CharField(max_length=100, choices=REFERRAL_CHOICES)
-   
+    status=models.CharField(max_length=50,null= True,blank=True)
+    STAGE_CHOICES = (
+        ('submitted', 'Submitted to Adventus'),
+        ('lodged', 'Lodged with Institutions'),
+        ('offers_received', 'Offers Received'),
+        ('visas_granted', 'Visas Granted'),
+        ('students_commenced', 'Students Commenced'),
+        ('students_deferred', 'Students Deferred'),
+    )
+    ApplicationStage = models.CharField(max_length=100, choices=STAGE_CHOICES, default='')
+
+    def __str__(self):
+        return self.user.email
+    
+
+
+class Agent(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='agent_profile')
+    student = models.ForeignKey(Student,on_delete=models.CASCADE)
+    messages = models.TextField(blank=True ,null=True)
+    tasks = models.CharField(max_length=50)
+    timeline = models.CharField(max_length=50)
+    owner = models.CharField(max_length=50)
+    phase = models.CharField(max_length=50)
+    action = models.CharField(max_length=50)
+    active_team =models.CharField(max_length=50)
+    notes = models.TextField(blank=True ,null=True)
+    # Add any additional fields specific to agents
+
+    def __str__(self):
+        return self.user.email
+
+class Staff(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='staff_profile')
+    agent = models.ForeignKey(Agent,on_delete=models.CASCADE)
+    # Add any additional fields specific to staff members
+
+    def __str__(self):
+        return self.user.email
+
+# Create groups for each user type and assign appropriate permissions
+group_superadmin, _ = Group.objects.get_or_create(name='Super Admin')
+group_staff, _ = Group.objects.get_or_create(name='Staff')
+group_agent, _ = Group.objects.get_or_create(name='Agent')
+group_student, _ = Group.objects.get_or_create(name='Student')
+
+# Assign permissions to groups
+# Example permissions - replace with actual permissions based on your requirements
+group_superadmin.permissions.add(
+    # List of permissions for the super admin group
+)
+
+group_staff.permissions.add(
+    # List of permissions for the staff group
+)
+
+group_agent.permissions.add(
+    # List of permissions for the agent group
+)
+
+group_student.permissions.add(
+    # List of permissions for the student group
+)
+
+class StudentApplication(models.Model):
+    student= models.ManyToManyField(Student)
+    application_id=models.IntegerField()
+    application_status = models.CharField(max_length=50)
+    save_date = models.DateField(auto_now=False, auto_now_add=False)
+    shortlisted_date = models.DateTimeField(auto_now=False, auto_now_add=False)
+    first_submitted = models.DateField(auto_now=False, auto_now_add=False)
+    declaration = models.BooleanField(default=False)
+    medical_condition = models.BooleanField(default=False)
+
 
 class AcademicAchievement(models.Model):
     HIGHEST_EDUCATION_CHOICES = (
@@ -126,21 +218,21 @@ class AcademicAchievement(models.Model):
         ('masters', 'Master\'s Degree'),
         ('doctrate_phd', 'Doctorate/PhD'),
     )
-
-    what_is_your_highest_level_of_education = models.CharField(max_length=50, choices=HIGHEST_EDUCATION_CHOICES)
+    student= models.ForeignKey(Student,on_delete=models.CASCADE)
+    highest_education = models.CharField(max_length=50, choices=HIGHEST_EDUCATION_CHOICES)
     country_where_study_completed = models.CharField(max_length=100)
+    start_date = models.DateField(default=date.today)
+    # school_institute_name = models.CharField(max_length=50)
+    school_institute_name = models.CharField(max_length=100, default='')
+    completed_date = models.DateField(default=date.today)
+    title_of_your_course = models.CharField(max_length=50,default='')
+    result = models.FloatField(default=0.0)
 
+    def __str__(self):
+        return f"Highest Education: {self.highest_education}"
 
 class StudyPreference(models.Model):
-    # INTENDED_COURSE_LEVEL_CHOICES = (
-    #     ('undergraduate', 'Undergraduate'),
-    #     ('postgraduate', 'Postgraduate'),
-    #     ('diploma', 'Diploma'),
-    #     ('certificate', 'Certificate'),
-    #     ('language', 'Language Program'),
-    #     ('foundation', 'Foundation Program'),
-    # )
-
+    student= models.ForeignKey(Student,on_delete=models.CASCADE)
     intended_area_of_study = models.CharField(max_length=100)
     # intended_course_level = models.CharField(max_length=50, choices=INTENDED_COURSE_LEVEL_CHOICES)
     intended_course_level = models.CharField(max_length=50)
@@ -155,3 +247,53 @@ class StudyPreference(models.Model):
     intended_destination_2 = models.CharField(max_length=100)
     intended_destination_3 = models.CharField(max_length=100)
     intended_destination_comments = models.TextField()
+
+class LeadTracking(models.Model):
+    LEAD_STATUS_CHOICES = (
+        ('cold', 'Cold'),
+        ('warm', 'Warm'),
+        ('hot', 'Hot'),
+        ('pending', 'Pending'),
+    )
+
+    PROSPECT_RATING_CHOICES = (
+        ('not_rated', 'Not Rated'),
+        ('1_star', '1 Star'),
+        ('2_star', '2 Star'),
+        ('3_star', '3 Star'),
+    )
+    student= models.ForeignKey(Student,on_delete=models.CASCADE)
+    # agent = models.ForeignKey(Agent,on_delete=models.CASCADE)
+    lead_status = models.CharField(max_length=50, choices=LEAD_STATUS_CHOICES)
+    prospect_rating = models.CharField(max_length=50, choices=PROSPECT_RATING_CHOICES)
+    preference_appointment_date = models.DateTimeField(null=True, blank=True)
+    lead_source = models.CharField(max_length=100)
+    candidate_comments = models.TextField()
+    signup_country = models.CharField(max_length=100)
+    signup_city = models.CharField(max_length=100)
+    signup_state_province = models.CharField(max_length=100)
+    signup_ip = models.GenericIPAddressField()
+
+class PersonalDetails(models.Model):
+    student= models.ForeignKey(Student,on_delete=models.CASCADE)
+    address_1 = models.CharField(max_length=100)
+    address_2 = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100)
+    state_province = models.CharField(max_length=100)
+    country = models.CharField(max_length=100)
+    postcode_zipcode = models.CharField(max_length=20)
+    date_of_birth = models.DateField()
+    marital_status = models.CharField(max_length=50)
+    timezone = models.CharField(max_length=100)
+    currency = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='personal_images/')
+
+class CampaignData(models.Model):
+    student= models.ForeignKey(Student,on_delete=models.CASCADE)
+    lead_id = models.IntegerField()
+    campaign_id = models.IntegerField()
+    campaign_name = models.CharField(max_length=100)
+    form_id = models.IntegerField()
+    form_name = models.CharField(max_length=100)
+    ad_id = models.IntegerField()
+    ad_name = models.CharField(max_length=100)
