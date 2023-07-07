@@ -1,6 +1,10 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,Group
 from django.db import models
 from datetime import date
+# from .custom_user import CustomUser
+from pytz import all_timezones
+import pycountry
+
 
 
 class CustomUserManager(BaseUserManager):
@@ -31,6 +35,7 @@ class CustomUser(AbstractBaseUser):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    is_superuser = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
 
@@ -38,6 +43,14 @@ class CustomUser(AbstractBaseUser):
 
     def __str__(self):
         return self.email
+    
+    def has_perm(self, perm, obj=None):
+        # Simplest permission check is superuser status
+        return self.is_superuser
+
+    def has_module_perms(self, app_label):
+        # Allow access to the app section of the admin site for superusers
+        return self.is_superuser
 
 # class University(models.Model):
     # UNIVERSITY_CHOICES = [
@@ -65,36 +78,45 @@ class CustomUser(AbstractBaseUser):
     # ]
     # university_choice = models.CharField(max_length=100, choices=UNIVERSITY_CHOICES)
 class University(models.Model):
-    serial_no = models.IntegerField()
-    name = models.CharField(max_length=100,blank=True ,null=True)
-    concentration = models.CharField(max_length=100,blank=True ,null=True)
+    serial_no = models.IntegerField(null=True, blank=True)
+    university = models.CharField(max_length=100,blank=True,null=True)
+    name = models.CharField(max_length=100,blank=True,null=True)
+    concentration = models.CharField(max_length=100,blank=True,null=True)
     website_url = models.URLField()
-    campus = models.CharField(max_length=100,blank=True ,null=True)
-    country = models.CharField(max_length=100,blank=True ,null=True)
-    study_level = models.CharField(max_length=100,blank=True ,null=True)
-    duration = models.CharField(max_length=100,blank=True ,null=True)
-    intakes = models.CharField(max_length=100,blank=True ,null=True)
-    entry_requirements = models.TextField(blank=True ,null=True)
-    ielts_score = models.DecimalField(max_digits=4, decimal_places=2)
-    ielts_no_band_less_than = models.DecimalField(max_digits=4, decimal_places=2)
-    toefl_score = models.IntegerField(blank=True ,null=True)
-    toefl_no_band_less_than = models.IntegerField(blank=True ,null=True)
-    pte_score = models.IntegerField(blank=True ,null=True)
-    pte_no_band_less_than = models.CharField(max_length=10)
-    application_deadline = models.DateField(null=True)
-    application_fee = models.DecimalField(max_digits=10, decimal_places=2 ,null=True)
-    yearly_tuition_fees = models.DecimalField(max_digits=10, decimal_places=2, blank=True ,null=True)
-    scholarship_available = models.BooleanField(default=False)
-    scholarship_detail = models.TextField(blank=True ,null=True)
-    backlog_range = models.CharField(max_length=100, blank=True, null=True)
-    remarks = models.TextField(blank=True ,null=True)
-    esl_elp_detail = models.TextField(blank=True ,null=True)
-    application_mode = models.CharField(max_length=100 ,null=True)
-    application = models.CharField(max_length=100,null=True)
-    det_score = models.IntegerField(blank=True ,null=True)
+    campus = models.CharField(max_length=100,blank=True,null=True)
+    country = models.CharField(max_length=100,blank=True,null=True)
+    study_level = models.CharField(max_length=100,blank=True,null=True)
+    duration = models.CharField(max_length=100,blank=True,null=True)
+    intakes = models.CharField(max_length=100,blank=True,null=True)
+    entry_requirements = models.TextField(blank=True,null=True)
+    ielts_score = models.FloatField(null=True,blank=True)
+    ielts_no_band_less_than = models.FloatField(null=True,blank=True)
+    toefl_score = models.FloatField(blank=True, null=True)
+    toefl_no_band_less_than = models.FloatField(blank=True,null=True)
+    pte_score = models.FloatField(blank=True, null=True)
+    pte_no_band_less_than = models.CharField(max_length=10,null=True,blank=True)
+    application_deadline = models.CharField(max_length=10,null=True,blank=True)
+    application_fee = models.CharField(max_length=100,blank=True,null=True)
+    yearly_tuition_fees = models.CharField(max_length=100,blank=True,null=True)
+    scholarship_available = models.BooleanField(default=False,null=True)
+    scholarship_detail = models.TextField(blank=True,null=True)
+    backlog_range = models.CharField(max_length=100,blank=True,null=True)
+    remarks = models.TextField(blank=True,null=True)
+    esl_elp_detail = models.TextField(blank=True,null=True)
+    application_mode = models.CharField(max_length=100,null=True)
+    # application = models.CharField(max_length=100,null=True)
+    # det_score = models.FloatField(blank=True,null=True)
     
     def __str__(self):
         return self.name
+    
+    def set_scholarship_available(self, value):
+        if str(value).lower() == "yes":
+            self.scholarship_available = True
+        elif str(value).lower() == "no":
+            self.scholarship_available = False
+        else:
+            self.scholarship_available = None
 
    
 class Student(models.Model):
@@ -122,12 +144,12 @@ class Student(models.Model):
     email = models.EmailField(max_length=254,null= True,blank=True)
     nationality=models.CharField(max_length=100,null= True,blank=True)
     region = models.CharField(max_length=50,null= True,blank=True)
-    onshore = models.BooleanField()
+    onshore = models.BooleanField(default=False)
     preferred_language = models.CharField(max_length=50,null= True,blank=True)
-    contact_number = models.IntegerField()
+    contact_number = models.CharField(max_length=12,null= True,blank=True)
     country_of_residence=models.CharField(max_length=50,null= True,blank=True)
     highest_education=models.CharField(max_length=50,null= True,blank=True)
-    created_at= models.DateField(auto_now=False, auto_now_add=False,null= True,blank=True)
+    created_at= models.DateField(auto_now_add=True,null= True,blank=True)
     how_did_you_hear = models.CharField(max_length=100, choices=REFERRAL_CHOICES)
     status=models.CharField(max_length=50,null= True,blank=True)
     STAGE_CHOICES = (
@@ -143,18 +165,19 @@ class Student(models.Model):
     def __str__(self):
         return self.user.email
     
-
-
+    # def get_user_email(self):
+    #     return self.user.email
+    
 class Agent(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='agent_profile')
     student = models.ForeignKey(Student,on_delete=models.CASCADE)
     messages = models.TextField(blank=True ,null=True)
-    tasks = models.CharField(max_length=50)
-    timeline = models.CharField(max_length=50)
-    owner = models.CharField(max_length=50)
-    phase = models.CharField(max_length=50)
-    action = models.CharField(max_length=50)
-    active_team =models.CharField(max_length=50)
+    tasks = models.CharField(max_length=50,null=True, blank=True)
+    timeline = models.CharField(max_length=50,null=True, blank=True)
+    owner = models.CharField(max_length=50,null=True, blank=True)
+    phase = models.CharField(max_length=50,null=True, blank=True)
+    action = models.CharField(max_length=50,null=True, blank=True)
+    active_team =models.CharField(max_length=50,null=True, blank=True)
     notes = models.TextField(blank=True ,null=True)
     # Add any additional fields specific to agents
 
@@ -195,8 +218,8 @@ group_student.permissions.add(
 
 class StudentApplication(models.Model):
     student= models.ManyToManyField(Student)
-    application_id=models.IntegerField()
-    application_status = models.CharField(max_length=50)
+    application_id=models.IntegerField(null=True, blank=True)
+    application_status = models.CharField(max_length=50,null=True, blank=True)
     save_date = models.DateField(auto_now=False, auto_now_add=False)
     shortlisted_date = models.DateTimeField(auto_now=False, auto_now_add=False)
     first_submitted = models.DateField(auto_now=False, auto_now_add=False)
@@ -220,33 +243,33 @@ class AcademicAchievement(models.Model):
     )
     student= models.ForeignKey(Student,on_delete=models.CASCADE)
     highest_education = models.CharField(max_length=50, choices=HIGHEST_EDUCATION_CHOICES)
-    country_where_study_completed = models.CharField(max_length=100)
+    country_where_study_completed = models.CharField(max_length=100,null=True, blank=True)
     start_date = models.DateField(default=date.today)
     # school_institute_name = models.CharField(max_length=50)
-    school_institute_name = models.CharField(max_length=100, default='')
+    school_institute_name = models.CharField(max_length=100, null=True, blank=True)
     completed_date = models.DateField(default=date.today)
-    title_of_your_course = models.CharField(max_length=50,default='')
-    result = models.FloatField(default=0.0)
+    title_of_your_course = models.CharField(max_length=50,null=True, blank=True)
+    result = models.FloatField(default=0.0,null=True, blank=True)
 
     def __str__(self):
         return f"Highest Education: {self.highest_education}"
 
 class StudyPreference(models.Model):
     student= models.ForeignKey(Student,on_delete=models.CASCADE)
-    intended_area_of_study = models.CharField(max_length=100)
+    intended_area_of_study = models.CharField(max_length=100,null=True, blank=True)
     # intended_course_level = models.CharField(max_length=50, choices=INTENDED_COURSE_LEVEL_CHOICES)
-    intended_course_level = models.CharField(max_length=50)
-    courses_and_fields_comments = models.TextField()
-    career_paths = models.TextField()
-    intended_institutions = models.TextField()
-    intended_intake_quarter = models.CharField(max_length=50)
-    intended_intake_year = models.IntegerField()
-    intended_intake_comments = models.TextField()
-    funding_source = models.CharField(max_length=100)
-    intended_destination_1 = models.CharField(max_length=100)
-    intended_destination_2 = models.CharField(max_length=100)
-    intended_destination_3 = models.CharField(max_length=100)
-    intended_destination_comments = models.TextField()
+    intended_course_level = models.CharField(max_length=50,null=True, blank=True)
+    courses_and_fields_comments = models.TextField(null=True, blank=True)
+    career_paths = models.TextField(null=True, blank=True)
+    intended_institutions = models.TextField(null=True, blank=True)
+    intended_intake_quarter = models.CharField(max_length=50,null=True, blank=True)
+    intended_intake_year = models.IntegerField(null=True, blank=True)
+    intended_intake_comments = models.TextField(null=True, blank=True)
+    funding_source = models.CharField(max_length=100,null=True, blank=True)
+    intended_destination_1 = models.CharField(max_length=100,null=True, blank=True)
+    intended_destination_2 = models.CharField(max_length=100,null=True, blank=True)
+    intended_destination_3 = models.CharField(max_length=100,null=True, blank=True)
+    intended_destination_comments = models.TextField(null=True, blank=True)
 
 class LeadTracking(models.Model):
     LEAD_STATUS_CHOICES = (
@@ -267,33 +290,36 @@ class LeadTracking(models.Model):
     lead_status = models.CharField(max_length=50, choices=LEAD_STATUS_CHOICES)
     prospect_rating = models.CharField(max_length=50, choices=PROSPECT_RATING_CHOICES)
     preference_appointment_date = models.DateTimeField(null=True, blank=True)
-    lead_source = models.CharField(max_length=100)
-    candidate_comments = models.TextField()
-    signup_country = models.CharField(max_length=100)
-    signup_city = models.CharField(max_length=100)
-    signup_state_province = models.CharField(max_length=100)
-    signup_ip = models.GenericIPAddressField()
+    lead_source = models.CharField(max_length=100,null=True, blank=True)
+    candidate_comments = models.TextField(null=True, blank=True)
+    signup_country = models.CharField(max_length=100,null=True, blank=True)
+    signup_city = models.CharField(max_length=100,null=True, blank=True)
+    signup_state_province = models.CharField(max_length=100,null=True, blank=True)
+    signup_ip = models.GenericIPAddressField(null=True, blank=True)
 
 class PersonalDetails(models.Model):
     student= models.ForeignKey(Student,on_delete=models.CASCADE)
-    address_1 = models.CharField(max_length=100)
-    address_2 = models.CharField(max_length=100, blank=True)
-    city = models.CharField(max_length=100)
-    state_province = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
-    postcode_zipcode = models.CharField(max_length=20)
-    date_of_birth = models.DateField()
-    marital_status = models.CharField(max_length=50)
-    timezone = models.CharField(max_length=100)
-    currency = models.CharField(max_length=50)
+    address_1 = models.CharField(max_length=100,null=True, blank=True)
+    address_2 = models.CharField(max_length=100, null=True, blank=True)
+    city = models.CharField(max_length=100,null=True, blank=True)
+    state_province = models.CharField(max_length=100,null=True, blank=True)
+    country = models.CharField(max_length=100,null=True, blank=True)
+    postcode_zipcode = models.CharField(max_length=20,null=True, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    marital_status = models.CharField(max_length=50,null=True, blank=True)
+    # timezone = models.CharField(max_length=100,null=True, blank=True)
+    timezone = models.CharField(max_length=32,choices=[(tz, tz) for tz in all_timezones],blank=True,null=True)
+    # currency = models.CharField(max_length=50,null=True, blank=True)
+    CURRENCY_CHOICES = [(currency.alpha_3, currency.name) for currency in pycountry.currencies]
+    currency = models.CharField(max_length=3,choices=CURRENCY_CHOICES,blank=True,null=True)
     image = models.ImageField(upload_to='personal_images/')
 
 class CampaignData(models.Model):
     student= models.ForeignKey(Student,on_delete=models.CASCADE)
-    lead_id = models.IntegerField()
-    campaign_id = models.IntegerField()
-    campaign_name = models.CharField(max_length=100)
-    form_id = models.IntegerField()
-    form_name = models.CharField(max_length=100)
-    ad_id = models.IntegerField()
-    ad_name = models.CharField(max_length=100)
+    lead_id = models.IntegerField(null=True, blank=True)
+    campaign_id = models.IntegerField(null=True, blank=True)
+    campaign_name = models.CharField(max_length=100,null=True, blank=True)
+    form_id = models.IntegerField(null=True, blank=True)
+    form_name = models.CharField(max_length=100,null=True, blank=True)
+    ad_id = models.IntegerField(null=True, blank=True)
+    ad_name = models.CharField(max_length=100,null=True, blank=True)
