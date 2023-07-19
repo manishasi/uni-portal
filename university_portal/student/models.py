@@ -1,10 +1,10 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,Group
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,Group,PermissionsMixin
 from django.db import models
 from datetime import date
+from django.contrib.auth.hashers import make_password
 # from .custom_user import CustomUser
 from pytz import all_timezones
 import pycountry
-
 
 
 class CustomUserManager(BaseUserManager):
@@ -23,7 +23,8 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra_fields)
 
-class CustomUser(AbstractBaseUser):
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
     USER_TYPE_CHOICES = (
         ('superadmin', 'Super Admin'),
         ('staff', 'Staff'),
@@ -35,23 +36,26 @@ class CustomUser(AbstractBaseUser):
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
 
     objects = CustomUserManager()
 
-    def __str__(self):
+    def _str_(self):
         return self.email
-    
+
     def has_perm(self, perm, obj=None):
-        # Simplest permission check is superuser status
         return self.is_superuser
 
     def has_module_perms(self, app_label):
-        # Allow access to the app section of the admin site for superusers
         return self.is_superuser
-
+    
+    def save(self, *args, **kwargs):
+        if not self.pk and not self.password.startswith('pbkdf2_'):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+    
+    
 # class University(models.Model):
     # UNIVERSITY_CHOICES = [
     #     ('University of Tasmania', 'University of Tasmania'),
@@ -98,7 +102,7 @@ class University(models.Model):
     application_deadline = models.CharField(max_length=10,null=True,blank=True)
     application_fee = models.CharField(max_length=100,blank=True,null=True)
     yearly_tuition_fees = models.CharField(max_length=100,blank=True,null=True)
-    scholarship_available = models.BooleanField(default=False,null=True)
+    scholarship_available = models.BooleanField(default=False,null=True,blank=True)
     scholarship_detail = models.TextField(blank=True,null=True)
     backlog_range = models.CharField(max_length=100,blank=True,null=True)
     remarks = models.TextField(blank=True,null=True)
@@ -138,7 +142,7 @@ class Student(models.Model):
         ('other', 'Other'),
     )
     University= models.ManyToManyField(University,related_name='students')
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='student_profile')
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE,blank=True ,null=True,related_name='student_profile')
     name = models.CharField(max_length=100,null= True,blank=True)
     family_name = models.CharField(max_length=100,null= True,blank=True)
     email = models.EmailField(max_length=254,null= True,blank=True)
@@ -170,7 +174,7 @@ class Student(models.Model):
     
 class Agent(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='agent_profile')
-    student = models.ForeignKey(Student,on_delete=models.CASCADE)
+    student = models.ForeignKey(Student,on_delete=models.CASCADE,blank=True ,null=True)
     messages = models.TextField(blank=True ,null=True)
     tasks = models.CharField(max_length=50,null=True, blank=True)
     timeline = models.CharField(max_length=50,null=True, blank=True)
@@ -186,35 +190,35 @@ class Agent(models.Model):
 
 class Staff(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='staff_profile')
-    agent = models.ForeignKey(Agent,on_delete=models.CASCADE)
+    agent = models.ForeignKey(Agent,on_delete=models.CASCADE,blank=True ,null=True)
     # Add any additional fields specific to staff members
 
     def __str__(self):
         return self.user.email
 
-# Create groups for each user type and assign appropriate permissions
-group_superadmin, _ = Group.objects.get_or_create(name='Super Admin')
-group_staff, _ = Group.objects.get_or_create(name='Staff')
-group_agent, _ = Group.objects.get_or_create(name='Agent')
-group_student, _ = Group.objects.get_or_create(name='Student')
+# # Create groups for each user type and assign appropriate permissions
+# group_superadmin, _ = Group.objects.get_or_create(name='Super Admin')
+# group_staff, _ = Group.objects.get_or_create(name='Staff')
+# group_agent, _ = Group.objects.get_or_create(name='Agent')
+# group_student, _ = Group.objects.get_or_create(name='Student')
 
-# Assign permissions to groups
-# Example permissions - replace with actual permissions based on your requirements
-group_superadmin.permissions.add(
-    # List of permissions for the super admin group
-)
+# # Assign permissions to groups
+# # Example permissions - replace with actual permissions based on your requirements
+# group_superadmin.permissions.add(
+#     # List of permissions for the super admin group
+# )
 
-group_staff.permissions.add(
-    # List of permissions for the staff group
-)
+# group_staff.permissions.add(
+#     # List of permissions for the staff group
+# )
 
-group_agent.permissions.add(
-    # List of permissions for the agent group
-)
+# group_agent.permissions.add(
+#     # List of permissions for the agent group
+# )
 
-group_student.permissions.add(
-    # List of permissions for the student group
-)
+# group_student.permissions.add(
+#     # List of permissions for the student group
+# )
 
 class StudentApplication(models.Model):
     student= models.ManyToManyField(Student)

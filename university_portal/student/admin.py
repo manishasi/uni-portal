@@ -1,6 +1,6 @@
 from django.contrib import admin
 # Register your models here.
-from .models import University,Student,AcademicAchievement,StudyPreference,LeadTracking,CampaignData,PersonalDetails
+from .models import University,Student,AcademicAchievement,StudyPreference,LeadTracking,CampaignData,PersonalDetails,Agent,Staff
 from .models import CustomUser
 
 # Define an admin class for the CustomUser model
@@ -57,4 +57,5 @@ class PersonalDetailsAdmin(admin.ModelAdmin):
 class CampaignDataAdmin(admin.ModelAdmin):
     list_display = ['id','lead_id','campaign_id','campaign_name','form_id','form_name','ad_id','ad_name']
 
-
+admin.site.register(Agent)
+# admin.site.register(Staff)
